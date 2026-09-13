@@ -1,0 +1,15 @@
+TrialWatch
+Medical Evidence Commons
+
+Copyright 2026 TrialWatch contributors
+
+This product is a synthetic explorer. It does not contain real patients,
+clinicians, trial registrations, or identifiable medical records. Public
+packets hold claims, sources, review process results, and what was not
+asserted.
+
+The explorer demonstration key is published on purpose. A valid signature
+under that key proves this demo issued a receipt. It is not a production
+issuer trust anchor.
+
+Inclusion is not truth. A completed review is not a treatment decision.

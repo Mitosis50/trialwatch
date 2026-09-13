@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --color-background: #f3eee4;
+  --color-foreground: #1c2320;
+  --color-card: #faf6ee;
+  --color-card-foreground: #1c2320;
+  --color-popover: #faf6ee;
+  --color-popover-foreground: #1c2320;
+  --color-primary: #2c5f56;
+  --color-primary-foreground: #faf6ee;
+  --color-secondary: #efe8da;
+  --color-secondary-foreground: #1c2320;
+  --color-muted: #efe8da;
+  --color-muted-foreground: #6b6458;
+  --color-accent: #e4efe8;
+  --color-accent-foreground: #1c2320;
+  --color-destructive: #8b3a32;
+  --color-destructive-foreground: #faf6ee;
+  --color-border: #d5cbb8;
+  --color-input: #d5cbb8;
+  --color-ring: #2c5f56;
+  --color-paper: #f3eee4;
+  --color-ink: #1c2320;
+  --color-rule: #1c2320;
+  --color-complete: #2c5f56;
+  --color-complete-fg: #e4efe8;
+  --color-incomplete: #8a6a3a;
+  --color-incomplete-fg: #f3ead8;
+  --color-blocked: #8b3a32;
+  --color-blocked-fg: #f3e2de;
+  --color-ochre: #8a6a3a;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+
+  --text-label: 0.6875rem;
+  --text-display: 3.25rem;
+  --tracking-label: 0.16em;
+  --tracking-display: -0.03em;
+
+  --shadow-border:
+    0px 0px 0px 1px rgba(28, 35, 32, 0.08),
+    0px 1px 2px -1px rgba(28, 35, 32, 0.06),
+    0px 2px 4px 0px rgba(28, 35, 32, 0.04);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    font-family: var(--font-display);
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: var(--color-muted-foreground);
+  }
+
+  article {
+    max-width: none;
+  }
+}
+
