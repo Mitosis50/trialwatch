@@ -1,5 +1,6 @@
 # TrialWatch
 
+**Live:** [trialwatch.vercel.app](https://trialwatch.vercel.app)  
 **Protocol:** Medical Evidence Commons  
 **Object:** Commons draft review receipt (`mec.review_receipt/0.1.0-draft`)  
 **License:** Apache License 2.0
@@ -71,6 +72,8 @@ The founder-review draft is the in-app [white paper](/whitepaper) and [`WHITEPAP
 ## Host it yourself (GitHub → Vercel)
 
 This is the intended public home: a repository you own, a Vercel project you own, a domain you own.
+
+Production on this account: [https://trialwatch.vercel.app](https://trialwatch.vercel.app).
 
 1. This tree is at [Mitosis50/trialwatch](https://github.com/Mitosis50/trialwatch).
 2. In Vercel: **Add New Project** → import that repo.
