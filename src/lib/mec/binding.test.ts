@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildExport, buildExportFromVersion } from "./export";
-import { PACKETS } from "./fixtures";
+import { PACKETS } from "./issued";
 import {
   tamperSnapshotKeepManifest,
   tamperSourceBinding,

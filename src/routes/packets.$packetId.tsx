@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PacketFrame } from "@/components/mec/packet-frame";
-import { getPacket } from "@/lib/mec/fixtures";
+import { getPacket } from "@/lib/mec/issued";
 import { overlayPacket, useLocalReviews } from "@/lib/mec/local-review";
 
 export const Route = createFileRoute("/packets/$packetId")({ component: PacketLayout });
