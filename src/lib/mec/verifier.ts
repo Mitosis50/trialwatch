@@ -1,7 +1,8 @@
-import { digestOf, isDigest } from "./digest";
+import { digestOf, digestOfText, isDigest } from "./digest";
 import { POLICY_BODY } from "./policy";
 import { verifyDemoSeal } from "./seal";
 import { PRODUCTION_TRUSTED_KEY_IDS } from "./keys";
+import { manifestCommitment, type InputManifest, type SourceSnapshot } from "./manifest";
 import {
   EXPORT_TYPE,
   MANDATORY_NON_ASSERTIONS,
@@ -30,6 +31,25 @@ export interface PacketExport {
   envelope: SignedReviewEnvelope;
   policy: typeof POLICY_BODY;
   ancestors: SignedReviewEnvelope[];
+  manifest?: InputManifest;
+  manifest_commitment?: string;
+  sources?: Array<{
+    id: string;
+    title?: string;
+    kind?: string;
+    originalUrl?: string;
+    bytes_digest: string | null;
+    snapshot_status?: string;
+  }>;
+  snapshots?: SourceSnapshot[];
+  review_record?: {
+    reviewers: unknown;
+    field_checks: unknown;
+    limitations?: string;
+    method_note?: string;
+    scientific_assessment?: string;
+    scientific_note?: string;
+  };
   source_refs: Array<{ id: string; title: string; locator_note: string; bytes_digest: string | null }>;
   evidence_included: boolean;
 }
@@ -176,7 +196,6 @@ export async function verifyExport(exp: PacketExport): Promise<VerifyReport> {
   checks.push(check("ancestor_completeness", ancestorResult, ancestorDetail));
 
   const superseded = ancestors.some((a) => a.receipt.supersedes_receipt_digest === exp.envelope.receipt_digest);
-  // Currency: this verifier is offline. If this receipt is superseded by a later ancestor, say so.
   const later = ancestors.find((a) => a.receipt.supersedes_receipt_digest === exp.envelope.receipt_digest);
   if (later) {
     checks.push(
@@ -204,13 +223,153 @@ export async function verifyExport(exp: PacketExport): Promise<VerifyReport> {
     );
   }
 
+  if (!exp.manifest || !exp.manifest_commitment) {
+    checks.push(
+      check(
+        "manifest_commitment",
+        "NOT_CHECKED",
+        "Export does not include an input manifest. The receipt input_manifest_digest cannot be recomputed from this file.",
+      ),
+    );
+  } else {
+    const recomputedManifest = manifestCommitment(exp.manifest);
+    const commitmentOk =
+      recomputedManifest === exp.manifest_commitment &&
+      recomputedManifest === receipt.input_manifest_digest;
+    checks.push(
+      check(
+        "manifest_commitment",
+        commitmentOk ? "PASS" : "FAIL",
+        commitmentOk
+          ? "Recomputed manifest commitment matches the receipt input_manifest_digest."
+          : `Manifest commitment mismatch. Export ${exp.manifest_commitment}; recomputed ${recomputedManifest}; receipt ${receipt.input_manifest_digest}.`,
+      ),
+    );
+  }
+
+  const snapshots = exp.snapshots ?? [];
+  const manifestSources = exp.manifest?.sources ?? [];
+  let binding: VerifyCheck["result"] = "PASS";
+  const notes: string[] = [];
+
+  if (snapshots.length === 0 && manifestSources.length === 0 && exp.source_refs.length === 0) {
+    checks.push(
+      check(
+        "source_binding",
+        "NOT_CHECKED",
+        "No captured snapshots or source records were included. Binding of source bytes cannot be checked.",
+      ),
+    );
+    checks.push(
+      check("source_availability", "UNAVAILABLE", "Missing source content. Result is unavailable, not a silent pass."),
+    );
+  } else {
+    for (const snap of snapshots) {
+      if (snap.snapshot_status !== "captured") continue;
+      if (!snap.snapshot) {
+        binding = "FAIL";
+        notes.push(`${snap.id}: marked captured but snapshot text is missing.`);
+        continue;
+      }
+      const bodyDigest = digestOfText(snap.snapshot);
+      const committed = manifestSources.find((s) => s.id === snap.id)?.bytes_digest;
+      if (!committed) {
+        binding = "FAIL";
+        notes.push(`${snap.id}: captured snapshot is not present in the committed manifest.`);
+      } else if (committed !== bodyDigest) {
+        binding = "FAIL";
+        notes.push(
+          `${snap.id}: captured bytes ${bodyDigest} do not match the receipt-committed manifest digest ${committed}.`,
+        );
+      }
+      if (snap.bytes_digest && snap.bytes_digest !== bodyDigest) {
+        binding = "FAIL";
+        notes.push(`${snap.id}: snapshot header digest no longer matches captured bytes.`);
+      }
+      const declared = exp.source_refs.find((r) => r.id === snap.id);
+      if (declared?.bytes_digest && declared.bytes_digest !== bodyDigest) {
+        binding = "FAIL";
+        notes.push(`${snap.id}: source_ref digest no longer matches captured bytes.`);
+      }
+    }
+
+    for (const ref of exp.source_refs) {
+      if (ref.bytes_digest && /^sha256:0+$/.test(ref.bytes_digest)) {
+        binding = "FAIL";
+        notes.push(`${ref.id}: source_ref digest is all zeros.`);
+      }
+      const committed = manifestSources.find((s) => s.id === ref.id)?.bytes_digest;
+      if (ref.bytes_digest && committed && ref.bytes_digest !== committed) {
+        binding = "FAIL";
+        notes.push(
+          `${ref.id}: source_ref digest ${ref.bytes_digest} does not match the receipt-committed manifest digest ${committed}.`,
+        );
+      }
+    }
+
+    for (const listed of exp.sources ?? []) {
+      const committed = manifestSources.find((s) => s.id === listed.id)?.bytes_digest;
+      if (listed.bytes_digest && committed && listed.bytes_digest !== committed) {
+        binding = "FAIL";
+        notes.push(
+          `${listed.id}: export source digest does not match the receipt-committed manifest digest ${committed}.`,
+        );
+      }
+    }
+
+    checks.push(
+      check(
+        "source_binding",
+        binding,
+        binding === "PASS"
+          ? "Captured source bytes match the receipt-committed manifest digests."
+          : notes.join(" "),
+      ),
+    );
+
+    const captured = snapshots.filter((s) => s.snapshot_status === "captured" && s.snapshot);
+    const omitted = snapshots.filter((s) => s.snapshot_status !== "captured");
+    if (captured.length === 0) {
+      checks.push(
+        check(
+          "source_availability",
+          "UNAVAILABLE",
+          "No permitted source snapshot is present. External locators are identified only.",
+        ),
+      );
+    } else if (omitted.length > 0) {
+      checks.push(
+        check(
+          "source_availability",
+          "NOT_CHECKED",
+          `${omitted.map((s) => s.id).join(", ")} not bundled. Captured copies were checked against the committed manifest.`,
+        ),
+      );
+    } else {
+      checks.push(
+        check("source_availability", "PASS", "Permitted source snapshots are present for every listed source."),
+      );
+    }
+  }
+
+  if (!exp.review_record) {
+    checks.push(check("review_record", "NOT_CHECKED", "Export does not include the review record."));
+  } else {
+    checks.push(check("review_record", "PASS", "Review record is present: reviewers, field checks, limitations."));
+  }
+
+  const capturedPresent = snapshots.some((s) => s.snapshot_status === "captured" && s.snapshot);
+  const evidenceResult: VerifyCheck["result"] =
+    binding === "FAIL" ? "UNKNOWN" : capturedPresent ? "PASS" : exp.evidence_included ? "UNKNOWN" : "UNAVAILABLE";
   checks.push(
     check(
       "evidence_availability",
-      exp.evidence_included ? "PASS" : "UNKNOWN",
-      exp.evidence_included
-        ? "Export includes source references for the bound manifest."
-        : "Export does not include source attachments. Availability of third-party documents cannot be guaranteed.",
+      evidenceResult,
+      evidenceResult === "PASS"
+        ? "Export includes captured source snapshots bound to the committed manifest."
+        : evidenceResult === "UNKNOWN"
+          ? "Source bytes and the committed manifest disagree, or only editable hashes were supplied. Availability is not a pass."
+          : "Export does not include captured source attachments. A source_ref digest alone is not evidence availability.",
     ),
   );
 
@@ -244,6 +403,29 @@ export function tamperNonAssertions(exp: PacketExport): PacketExport {
       seal: exp.envelope.seal,
     },
   };
+}
+
+export function tamperSourceBinding(exp: PacketExport): PacketExport {
+  const snapshots = (exp.snapshots ?? []).map((s, i) =>
+    i === 0 && s.snapshot ? { ...s, snapshot: `${s.snapshot}\n[altered reference]` } : s,
+  );
+  const source_refs = exp.source_refs.map((r, i) =>
+    i === 0 ? { ...r, bytes_digest: `sha256:${"0".repeat(64)}` } : r,
+  );
+  return { ...exp, snapshots, source_refs };
+}
+
+export function tamperSnapshotKeepManifest(exp: PacketExport): PacketExport {
+  const snapshots = (exp.snapshots ?? []).map((s, i) => {
+    if (i !== 0 || !s.snapshot) return s;
+    const snapshot = `${s.snapshot}\n[altered reference]`;
+    return { ...s, snapshot, bytes_digest: digestOfText(snapshot) };
+  });
+  const source_refs = exp.source_refs.map((r) => {
+    const snap = snapshots.find((s) => s.id === r.id);
+    return snap?.bytes_digest ? { ...r, bytes_digest: snap.bytes_digest } : r;
+  });
+  return { ...exp, snapshots, source_refs };
 }
 
 export function tamperPayload(exp: PacketExport): PacketExport {
