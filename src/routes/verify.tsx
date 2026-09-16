@@ -9,11 +9,11 @@ import {
   parseExportJson,
   tamperNonAssertions,
   tamperPayload,
-  tamperSourceBinding,
   verifyExport,
   type PacketExport,
   type VerifyReport,
 } from "@/lib/mec/verifier";
+import { bindSources, tamperSourceBinding } from "@/lib/mec/source-binding";
 
 export const Route = createFileRoute("/verify")({ component: VerifyPage });
 
@@ -37,7 +37,7 @@ function VerifyPage() {
     setBusy(true);
     setError(null);
     try {
-      setReport(await verifyExport(exp));
+      setReport(await bindSources(exp, await verifyExport(exp)));
     } finally {
       setBusy(false);
     }
@@ -94,76 +94,28 @@ function VerifyPage() {
       </p>
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div>
-          <label className="text-label uppercase tracking-label text-muted-foreground" htmlFor="export">
-            Export JSON
-          </label>
-          <Textarea
-            id="export"
-            className="mt-2 min-h-72 font-mono text-xs"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              setReport(null);
-            }}
-            placeholder="Paste a Commons packet export…"
-          />
+          <label className="text-label uppercase tracking-label text-muted-foreground" htmlFor="export">Export JSON</label>
+          <Textarea id="export" className="mt-2 min-h-72 font-mono text-xs" value={text} onChange={(e) => { setText(e.target.value); setReport(null); }} placeholder="Paste a Commons packet export…" />
           <div className="mt-3 flex flex-wrap gap-2">
             <label className="inline-flex h-11 cursor-pointer items-center rounded-md border border-border bg-card px-4 text-sm">
               Open file
-              <input
-                type="file"
-                accept="application/json,.json,.mec.json"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void onFile(file);
-                }}
-              />
+              <input type="file" accept="application/json,.json,.mec.json" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) void onFile(file); }} />
             </label>
-            <Button
-              type="button"
-              disabled={busy || !text.trim()}
-              onClick={() => {
-                const parsed = parseExportJson(text);
-                if (!parsed.ok) {
-                  setError(parsed.error);
-                  setReport(null);
-                  return;
-                }
-                void runOn(parsed.value);
-              }}
-            >
-              Verify
-            </Button>
-            <Button type="button" variant="outline" onClick={() => applyTamper("digest")}>
-              Tamper payload
-            </Button>
-            <Button type="button" variant="outline" onClick={() => applyTamper("policy")}>
-              Drop a non-assertion
-            </Button>
-            <Button type="button" variant="outline" onClick={() => applyTamper("source")}>
-              Alter a source snapshot
-            </Button>
+            <Button type="button" disabled={busy || !text.trim()} onClick={() => { const parsed = parseExportJson(text); if (!parsed.ok) { setError(parsed.error); setReport(null); return; } void runOn(parsed.value); }}>Verify</Button>
+            <Button type="button" variant="outline" onClick={() => applyTamper("digest")}>Tamper payload</Button>
+            <Button type="button" variant="outline" onClick={() => applyTamper("policy")}>Drop a non-assertion</Button>
+            <Button type="button" variant="outline" onClick={() => applyTamper("source")}>Alter a source snapshot</Button>
           </div>
           {error ? <p className="mt-3 text-sm text-blocked">{error}</p> : null}
-          {parsedPreview && !parsedPreview.ok ? (
-            <p className="mt-3 text-sm text-incomplete">{parsedPreview.error}</p>
-          ) : null}
+          {parsedPreview && !parsedPreview.ok ? <p className="mt-3 text-sm text-incomplete">{parsedPreview.error}</p> : null}
         </div>
         <div>
           <p className="text-label uppercase tracking-label text-muted-foreground">Load a fixture</p>
           <ul className="mt-2 grid gap-2">
             {PACKETS.map((p) => (
               <li key={p.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg bg-card px-3 py-3 text-left text-sm shadow-[var(--shadow-border)]"
-                  onClick={() => void loadPacket(p.id)}
-                >
-                  <span>
-                    <span className="font-medium">{p.study.acronym}</span>
-                    <span className="ml-2 text-muted-foreground">{p.fixtureTag}</span>
-                  </span>
+                <button type="button" className="flex w-full items-center justify-between rounded-lg bg-card px-3 py-3 text-left text-sm shadow-[var(--shadow-border)]" onClick={() => void loadPacket(p.id)}>
+                  <span><span className="font-medium">{p.study.acronym}</span><span className="ml-2 text-muted-foreground">{p.fixtureTag}</span></span>
                   {loadedId === p.id ? <span className="text-label uppercase tracking-label">Loaded</span> : null}
                 </button>
               </li>
