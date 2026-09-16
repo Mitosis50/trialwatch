@@ -7,6 +7,8 @@ import {
   describeManifestSources,
   describeSnapshots,
   manifestCommitment,
+  recomputeSourceDigest,
+  snapshotStatusOf,
 } from "./manifest";
 import type { PacketExport } from "./verifier";
 
@@ -48,10 +50,10 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
     source_refs: packet.sources.map((s) => ({
       id: s.id,
       title: s.title,
-      locator_note: `${s.kind} · ${s.provenance} · ${s.snapshotStatus ?? "captured"}`,
-      bytes_digest: s.bytesDigest,
+      locator_note: `${s.kind} · ${s.provenance} · ${snapshotStatusOf(s)}`,
+      bytes_digest: recomputeSourceDigest(s),
     })),
-    evidence_included: packet.sources.some((s) => (s.snapshotStatus ?? "captured") === "captured"),
+    evidence_included: packet.sources.some((s) => snapshotStatusOf(s) === "captured"),
   };
 }
 
