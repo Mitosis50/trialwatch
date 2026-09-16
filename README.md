@@ -54,14 +54,17 @@ A receipt does not establish clinical correctness, individual effectiveness or s
 Reading needs no account.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
 ```bash
 npm run typecheck
 npm run build
+npm run test:mec
 ```
+
+Clean install uses the committed lockfile. Under npm 11, peer resolution asks for Ajv 8 while the lock pins Ajv 6. The project `.npmrc` sets `legacy-peer-deps=true` and pins `registry.npmjs.org` so plain `npm ci` — including Vercel’s install command — matches the tested tree (423 packages). Do not regenerate the lockfile to hide that conflict.
 
 Print or save as PDF from the white paper. Download Markdown from `/whitepaper.md`. Export a packet from the receipt view; paste it on **Verify**. Dropped files are not uploaded.
 
@@ -78,11 +81,12 @@ Production on this account: [https://trialwatch.vercel.app](https://trialwatch.v
 1. This tree is at [Mitosis50/trialwatch](https://github.com/Mitosis50/trialwatch).
 2. In Vercel: **Add New Project** → import that repo.
 3. Framework: leave unset (Nitro already emits Vercel’s build output).
-4. Build command: `npm run build` (already in `vercel.json`).
-5. Set `VITE_AUTH_ENABLED=false`. This explorer has no accounts and must not grow a database of people.
-6. Deploy.
+4. Install command: `npm ci` (already in `vercel.json`; `.npmrc` supplies `legacy-peer-deps`).
+5. Build command: `npm run build` (already in `vercel.json`).
+6. Set `VITE_AUTH_ENABLED=false`. This explorer has no accounts and must not grow a database of people.
+7. Deploy.
 
-Node 22. Auth stays off. Database stays off.
+Node 22. Auth stays off. Database stays off. Do not promote a preview to production until install and `test:mec` pass on that commit.
 
 ## Doctrine
 
