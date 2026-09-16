@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildExport } from "./export";
+import { buildExport, buildExportFromVersion } from "./export";
 import { PACKETS } from "./fixtures";
 import {
   tamperSnapshotKeepManifest,
@@ -62,5 +62,20 @@ describe("source binding against committed manifest", () => {
   it("altering snapshot bytes without touching the manifest fails source_binding", async () => {
     const report = await verifyExport(tamperSourceBinding(glide()));
     assert.equal(resultOf("source_binding", report), "FAIL");
+  });
+
+  it("export preserves the issued receipt digest and v2 lineage", () => {
+    const packet = PACKETS.find((p) => p.study.acronym === "GLIDE-90");
+    assert.ok(packet);
+    const v1 = packet.versions.find((v) => v.version === 1);
+    const v2 = packet.versions.find((v) => v.version === 2);
+    assert.ok(v1 && v2);
+    const exp1 = buildExportFromVersion(packet, v1);
+    const exp2 = buildExportFromVersion(packet, v2);
+    assert.equal(exp1.envelope.receipt_digest, v1.envelope.receipt_digest);
+    assert.equal(exp2.envelope.receipt_digest, v2.envelope.receipt_digest);
+    assert.equal(exp2.envelope.receipt.input_manifest_digest, v2.envelope.receipt.input_manifest_digest);
+    assert.equal(exp2.envelope.receipt.supersedes_receipt_digest, v1.envelope.receipt_digest);
+    assert.equal(exp2.ancestors.some((a) => a.receipt_digest === v1.envelope.receipt_digest), true);
   });
 });

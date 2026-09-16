@@ -1,6 +1,5 @@
 import type { Packet, PacketVersion } from "./types";
 import { EXPORT_TYPE, RECEIPT_SCHEMA } from "./types";
-import { digestOf } from "./digest";
 import { POLICY_BODY } from "./policy";
 import { signDemoReceipt } from "./seal";
 import {
@@ -24,15 +23,6 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
     .map((other) => other.envelope);
   const manifest = buildInputManifest(packet, v);
   const manifest_commitment = manifestCommitment(manifest);
-  const receipt = {
-    ...v.envelope.receipt,
-    input_manifest_digest: manifest_commitment,
-  };
-  const envelope = {
-    ...v.envelope,
-    receipt,
-    receipt_digest: digestOf(receipt),
-  };
   return {
     record_type: EXPORT_TYPE,
     schema_version: RECEIPT_SCHEMA,
@@ -40,7 +30,7 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
     synthetic: true,
     packet_id: packet.id,
     version: v.version,
-    envelope,
+    envelope: v.envelope,
     policy: POLICY_BODY,
     ancestors,
     manifest,
