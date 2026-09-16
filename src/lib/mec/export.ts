@@ -2,6 +2,12 @@ import type { Packet, PacketVersion } from "./types";
 import { EXPORT_TYPE, RECEIPT_SCHEMA } from "./types";
 import { POLICY_BODY } from "./policy";
 import { signDemoReceipt } from "./seal";
+import {
+  buildInputManifest,
+  describeManifestSources,
+  describeSnapshots,
+  manifestCommitment,
+} from "./manifest";
 import type { PacketExport } from "./verifier";
 
 export function buildExport(packet: Packet, version?: number): PacketExport {
@@ -13,6 +19,7 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
   const ancestors = packet.versions
     .filter((other) => other.version < v.version)
     .map((other) => other.envelope);
+  const manifest = buildInputManifest(packet, v);
   return {
     record_type: EXPORT_TYPE,
     schema_version: RECEIPT_SCHEMA,
@@ -23,13 +30,28 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
     envelope: v.envelope,
     policy: POLICY_BODY,
     ancestors,
+    manifest,
+    manifest_commitment: manifestCommitment(manifest),
+    sources: describeManifestSources(packet),
+    snapshots: describeSnapshots(packet),
+    review_record: {
+      reviewers: packet.reviewers,
+      field_checks: v.fieldChecks,
+      limitations: packet.limitations,
+      method_version: packet.methodVersion,
+      method_note: packet.methodNote,
+      conflict_note: packet.conflictNote,
+      scientific_assessment: v.scientificAssessment,
+      scientific_note: v.scientificNote,
+      publication_note: packet.publicationNote,
+    },
     source_refs: packet.sources.map((s) => ({
       id: s.id,
       title: s.title,
-      locator_note: `${s.kind} · ${s.provenance}`,
+      locator_note: `${s.kind} · ${s.provenance} · ${s.snapshotStatus}`,
       bytes_digest: s.bytesDigest,
     })),
-    evidence_included: true,
+    evidence_included: packet.sources.some((s) => s.snapshotStatus === "captured"),
   };
 }
 
