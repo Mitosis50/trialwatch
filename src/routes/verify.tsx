@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { PACKETS } from "@/lib/mec/fixtures";
+import { PACKETS } from "@/lib/mec/issued";
 import { buildExport, buildSignedDemoExport } from "@/lib/mec/export";
 import {
   parseExportJson,
