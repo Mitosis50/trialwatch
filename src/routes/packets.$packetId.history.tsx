@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, resultTone } from "@/components/ui/badge";
-import { getPacket } from "@/lib/mec/fixtures";
+import { getPacket } from "@/lib/mec/issued";
 import { formatStamp, processLabel } from "@/lib/mec/format";
 import { shortDigest } from "@/lib/mec/digest";
 
