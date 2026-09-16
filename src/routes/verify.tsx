@@ -9,11 +9,12 @@ import {
   parseExportJson,
   tamperNonAssertions,
   tamperPayload,
+  tamperSnapshotKeepManifest,
+  tamperSourceBinding,
   verifyExport,
   type PacketExport,
   type VerifyReport,
 } from "@/lib/mec/verifier";
-import { bindSources, tamperSourceBinding } from "@/lib/mec/source-binding";
 
 export const Route = createFileRoute("/verify")({ component: VerifyPage });
 
@@ -37,7 +38,7 @@ function VerifyPage() {
     setBusy(true);
     setError(null);
     try {
-      setReport(await bindSources(exp, await verifyExport(exp)));
+      setReport(await verifyExport(exp));
     } finally {
       setBusy(false);
     }
@@ -66,7 +67,7 @@ function VerifyPage() {
     await runOn(parsed.value);
   }
 
-  function applyTamper(kind: "digest" | "policy" | "source") {
+  function applyTamper(kind: "digest" | "policy" | "source" | "manifest") {
     const parsed = parseExportJson(text);
     if (!parsed.ok) {
       setError(parsed.error);
@@ -77,7 +78,9 @@ function VerifyPage() {
         ? tamperPayload(parsed.value)
         : kind === "source"
           ? tamperSourceBinding(parsed.value)
-          : tamperNonAssertions(parsed.value);
+          : kind === "manifest"
+            ? tamperSnapshotKeepManifest(parsed.value)
+            : tamperNonAssertions(parsed.value);
     const serialized = JSON.stringify(next, null, 2);
     setText(serialized);
     void runOn(next);
@@ -105,6 +108,7 @@ function VerifyPage() {
             <Button type="button" variant="outline" onClick={() => applyTamper("digest")}>Tamper payload</Button>
             <Button type="button" variant="outline" onClick={() => applyTamper("policy")}>Drop a non-assertion</Button>
             <Button type="button" variant="outline" onClick={() => applyTamper("source")}>Alter a source snapshot</Button>
+            <Button type="button" variant="outline" onClick={() => applyTamper("manifest")}>Rewrite hashes, keep manifest</Button>
           </div>
           {error ? <p className="mt-3 text-sm text-blocked">{error}</p> : null}
           {parsedPreview && !parsedPreview.ok ? <p className="mt-3 text-sm text-incomplete">{parsedPreview.error}</p> : null}
