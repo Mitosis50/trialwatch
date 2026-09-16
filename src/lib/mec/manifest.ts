@@ -39,8 +39,12 @@ export function sourceSnapshotBody(source: SourceVersion): string {
   return `${source.title}\n${source.excerpt}`;
 }
 
+export function snapshotStatusOf(source: SourceVersion): SnapshotStatus {
+  return source.snapshotStatus ?? "captured";
+}
+
 export function recomputeSourceDigest(source: SourceVersion): Digest | null {
-  if (source.snapshotStatus !== "captured") return source.bytesDigest;
+  if (snapshotStatusOf(source) !== "captured") return source.bytesDigest;
   return digestOfText(sourceSnapshotBody(source));
 }
 
@@ -53,7 +57,7 @@ export function buildInputManifest(packet: Packet, version: PacketVersion): Inpu
       bytes_digest: recomputeSourceDigest(s),
       originalUrl: s.originalUrl,
       provenance: s.provenance,
-      snapshot_status: s.snapshotStatus,
+      snapshot_status: snapshotStatusOf(s),
     })),
     locators: version.fieldChecks.map((f) => [f.key, f.sourceLocator]),
   };
@@ -73,14 +77,15 @@ export function describeManifestSources(packet: Packet): ManifestSource[] {
     documentDate: s.documentDate,
     bytes_digest: recomputeSourceDigest(s),
     provenance: s.provenance,
-    snapshot_status: s.snapshotStatus,
+    snapshot_status: snapshotStatusOf(s),
     rightsBasis: s.rightsBasis,
   }));
 }
 
 export function describeSnapshots(packet: Packet): SourceSnapshot[] {
   return packet.sources.map((s) => {
-    if (s.snapshotStatus === "captured") {
+    const status = snapshotStatusOf(s);
+    if (status === "captured") {
       const body = sourceSnapshotBody(s);
       return {
         id: s.id,
@@ -90,7 +95,7 @@ export function describeSnapshots(packet: Packet): SourceSnapshot[] {
         dependency_note: null,
       };
     }
-    if (s.snapshotStatus === "external_dependency") {
+    if (status === "external_dependency") {
       return {
         id: s.id,
         snapshot_status: "external_dependency",
