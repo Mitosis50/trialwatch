@@ -48,10 +48,10 @@ export function buildExportFromVersion(packet: Packet, v: PacketVersion): Packet
     source_refs: packet.sources.map((s) => ({
       id: s.id,
       title: s.title,
-      locator_note: `${s.kind} · ${s.provenance} · ${s.snapshotStatus}`,
+      locator_note: `${s.kind} · ${s.provenance} · ${s.snapshotStatus ?? "captured"}`,
       bytes_digest: s.bytesDigest,
     })),
-    evidence_included: packet.sources.some((s) => s.snapshotStatus === "captured"),
+    evidence_included: packet.sources.some((s) => (s.snapshotStatus ?? "captured") === "captured"),
   };
 }
 
