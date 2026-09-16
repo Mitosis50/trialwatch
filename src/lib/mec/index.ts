@@ -5,6 +5,7 @@ export * from "./policy";
 export * from "./fixtures";
 export * from "./verifier";
 export * from "./export";
+export * from "./manifest";
 export * from "./format";
 export * from "./local-review";
 export * from "./keys";
