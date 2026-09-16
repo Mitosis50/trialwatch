@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { digestOf } from "./digest";
 import { evaluateReview } from "./policy";
 import { currentVersion } from "./fixtures";
+import { buildInputManifest, manifestCommitment } from "./manifest";
 import {
   CRITICAL_FIELD_KEYS,
   LOCAL_ISSUER_KEY_ID,
@@ -126,6 +127,9 @@ export function overlayPacket(packet: Packet, draft: LocalDraft | undefined): Pa
     schema_version: RECEIPT_SCHEMA,
     receipt_id: `R-${packet.id}-local-draft`,
     policy: { id: POLICY_ID, version: POLICY_VERSION, digest: digestOf(POLICY_BODY) },
+    input_manifest_digest: manifestCommitment(
+      buildInputManifest(packet, { ...current, claim: current.claim, fieldChecks } as PacketVersion),
+    ),
     run_digest: digestOf({ local: true, fieldChecks, result: evaluated.result }),
     rules: evaluated.rules.map((r) => ({
       code: r.code,
