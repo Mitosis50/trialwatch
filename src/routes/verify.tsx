@@ -9,6 +9,7 @@ import {
   parseExportJson,
   tamperNonAssertions,
   tamperPayload,
+  tamperSourceBinding,
   verifyExport,
   type PacketExport,
   type VerifyReport,
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/verify")({ component: VerifyPage });
 function tone(result: string) {
   if (result === "PASS") return "complete" as const;
   if (result === "FAIL") return "blocked" as const;
-  if (result === "UNKNOWN") return "incomplete" as const;
+  if (result === "UNKNOWN" || result === "UNAVAILABLE") return "incomplete" as const;
   return "neutral" as const;
 }
 
@@ -65,13 +66,18 @@ function VerifyPage() {
     await runOn(parsed.value);
   }
 
-  function applyTamper(kind: "digest" | "policy") {
+  function applyTamper(kind: "digest" | "policy" | "source") {
     const parsed = parseExportJson(text);
     if (!parsed.ok) {
       setError(parsed.error);
       return;
     }
-    const next = kind === "digest" ? tamperPayload(parsed.value) : tamperNonAssertions(parsed.value);
+    const next =
+      kind === "digest"
+        ? tamperPayload(parsed.value)
+        : kind === "source"
+          ? tamperSourceBinding(parsed.value)
+          : tamperNonAssertions(parsed.value);
     const serialized = JSON.stringify(next, null, 2);
     setText(serialized);
     void runOn(next);
@@ -86,7 +92,6 @@ function VerifyPage() {
         Verification runs in this browser. Files are not sent to a server. A passing integrity check is
         not a clinical conclusion, and this is not a Proof of Fulfillment verifier.
       </p>
-
       <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <div>
           <label className="text-label uppercase tracking-label text-muted-foreground" htmlFor="export">
@@ -136,6 +141,9 @@ function VerifyPage() {
             <Button type="button" variant="outline" onClick={() => applyTamper("policy")}>
               Drop a non-assertion
             </Button>
+            <Button type="button" variant="outline" onClick={() => applyTamper("source")}>
+              Alter a source snapshot
+            </Button>
           </div>
           {error ? <p className="mt-3 text-sm text-blocked">{error}</p> : null}
           {parsedPreview && !parsedPreview.ok ? (
@@ -163,7 +171,6 @@ function VerifyPage() {
           </ul>
         </div>
       </section>
-
       {report ? (
         <section className="mt-10">
           <h2 className="font-display text-2xl tracking-tight">{report.overallLabel}</h2>
