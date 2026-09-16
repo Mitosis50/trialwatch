@@ -4,7 +4,7 @@ import { NonAssertions } from "@/components/mec/non-assertions";
 import { RuleList } from "@/components/mec/rules";
 import { Badge, resultTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { currentVersion, getPacket } from "@/lib/mec/fixtures";
+import { currentVersion, getPacket } from "@/lib/mec/issued";
 import { overlayPacket, useLocalReviews } from "@/lib/mec/local-review";
 import { buildExport, buildSignedDemoExport, downloadJson } from "@/lib/mec/export";
 import { parseExportJson, verifyExport, type VerifyReport } from "@/lib/mec/verifier";
